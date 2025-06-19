@@ -1,0 +1,127 @@
+name: "Provision Infrastructure and Deploy App"
+description: "This workflow provisions infrastructure using Terraform and deploys a Node.js application to EKS using Helm."
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  TF_CLOUD_ORGANIZATION: "mancioshell"
+  TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
+  TF_WORKSPACE: "simple-nodejs-app"
+  CONFIG_DIRECTORY: "./infrastructure/terraform"
+  HELM_RELEASE_NAME: "nodejs-ms"
+
+jobs:
+  terraform:
+    outputs:
+      atlas_cluster_endpoint: ${{ fromJSON(steps.workspace-output.outputs.outputs)[0].value }}
+
+    name: "Provision Infrastructure"
+    runs-on: ubuntu-latest
+    permissions: # granular permissions
+      # so GitHub can check out this repo using the default github.token
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Upload Configuration
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        id: apply-upload
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          directory: ${{ env.CONFIG_DIRECTORY }}
+
+      - name: Create Apply Run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: apply-run
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          configuration_version: ${{ steps.apply-upload.outputs.configuration_version_id }}
+
+      - name: Apply
+        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
+        if: fromJSON(steps.apply-run.outputs.payload).data.attributes.actions.IsConfirmable
+        id: apply
+        with:
+          run: ${{ steps.apply-run.outputs.run_id }}
+          comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
+
+      - name: Workspace Outputs
+        uses: hashicorp/tfc-workflows-github/actions/workspace-output@v1.3.2
+        id: workspace-output
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+
+      - name: Echo Atlas Cluster Endpoint
+        run: echo ${{ fromJSON(steps.workspace-output.outputs.outputs)[0].value }}
+
+  deploy:
+    name: "Build and Deploy Application"
+    runs-on: ubuntu-latest
+
+    needs: terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_API_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Generate .env file
+        run: |
+          echo "MONGODB_URI=${{ needs.terraform.outputs.atlas_cluster_endpoint }}" > .env
+          echo "MONGODB_USERNAME=${{ secrets.MONGODB_USERNAME }}" >> .env
+          echo "MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }}" >> .env
+          echo "DATABASE_NAME=nodejs_db" >> .env
+          echo "COLLECTION_NAME=users" >> .env
+          echo "PORT=3000" >> .env
+          echo "NODE_ENV=production" >> .env
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t mancioshell/simple-nodejs-app:${{ github.sha }} .
+          docker push mancioshell/simple-nodejs-app:${{ github.sha }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.33.0"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Update kubeconfig file
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name eks-cluster --kubeconfig  ${{ github.workspace }}/kubeconfig
+
+      - name: Deploy to Kubernetes using Helm
+        env:
+          KUBECONFIG: ${{ github.workspace }}/kubeconfig
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./infrastructure/helm \
+          --set image.repository=mancioshell/simple-nodejs-app \
+          --set image.tag=${{ github.sha }} \
+          --namespace default
+
+      - name: Get Ingress Hostname
+        id: getingressdns
+        env:
+          KUBECONFIG: ${{ github.workspace }}/kubeconfig
+        run: kubectl get ingress ${{ env.HELM_RELEASE_NAME }}-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+      - name: Echo Ingress Hostname
+        run: echo ${${{ steps.getingressdns.outputs }}}

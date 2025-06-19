@@ -1,0 +1,11 @@
+node_modules
+.yarn
+
+.terraform
+.terraform.lock.hcl
+*.tfstate
+*.tfvars
+
+dist
+.env
+*.auto.tfvars
