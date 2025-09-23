@@ -1,10 +1,19 @@
+# ################################################################################
+# # IAM Module
+# ################################################################################
+
+module "iam" {
+  source  = "terraform-aws-modules/iam/aws"
+  version = "6.2.1"
+}
+
 ################################################################################
 # Load Balancer Role
 ################################################################################
 
-module "iam_eks_role" {
-  source                                 = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  role_name                              = "${var.env_name}_eks_lb"
+module "irsa" {
+  source                                 = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  name                                   = "${var.env_name}_eks_lb"
   attach_load_balancer_controller_policy = true
 
   oidc_providers = {
@@ -31,12 +40,12 @@ resource "kubernetes_service_account" "service-account" {
       "app.kubernetes.io/component" = "controller"
     }
     annotations = {
-      "eks.amazonaws.com/role-arn"               = module.iam_eks_role.iam_role_arn
+      "eks.amazonaws.com/role-arn"               = module.irsa.arn
       "eks.amazonaws.com/sts-regional-endpoints" = "true"
     }
   }
 
-  depends_on = [var.cluster_certificate_authority_data, var.cluster_endpoint, module.iam_eks_role]
+  depends_on = [var.cluster_certificate_authority_data, var.cluster_endpoint, module.iam]
 }
 
 ################################################################################
@@ -52,33 +61,30 @@ resource "helm_release" "lb" {
     kubernetes_service_account.service-account, var.vpc_id
   ]
 
-  set {
+  set = [{
     name  = "region"
     value = var.aws-region
-  }
+    },
+    {
+      name  = "vpcId"
+      value = var.vpc_id
+    },
+    {
+      name  = "image.repository"
+      value = "602401143452.dkr.ecr.${var.aws-region}.amazonaws.com/amazon/aws-load-balancer-controller"
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "false"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "aws-load-balancer-controller"
+    },
+    {
+      name  = "clusterName"
+      value = var.cluster_name
+    }
+  ]
 
-  set {
-    name  = "vpcId"
-    value = var.vpc_id
-  }
-
-  set {
-    name  = "image.repository"
-    value = "602401143452.dkr.ecr.${var.aws-region}.amazonaws.com/amazon/aws-load-balancer-controller"
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "false"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
-  }
-
-  set {
-    name  = "clusterName"
-    value = var.cluster_name
-  }
 }

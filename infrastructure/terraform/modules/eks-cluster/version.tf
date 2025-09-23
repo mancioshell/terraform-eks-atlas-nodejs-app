@@ -5,10 +5,5 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 6.14.0"
     }
-
-    mongodbatlas = {
-      source  = "mongodb/mongodbatlas"
-      version = ">=2.0.0"
-    }
   }
 }

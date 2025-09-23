@@ -27,19 +27,22 @@ resource "mongodbatlas_advanced_cluster" "cluster" {
   name         = var.cluster_name
   cluster_type = var.cluster_type
 
-  replication_specs {
-    region_configs {
-      priority              = 1
-      provider_name         = var.provider_name
-      region_name           = upper(replace(var.backing_provider_region_name, "-", "_"))
-      backing_provider_name = var.backing_provider_name
-      electable_specs {
-        instance_size = var.provider_instance_size_name
-        node_count    = 3
-      }
+  replication_specs = [
+    {
+      region_configs = [    
+        {
+          priority              = 1
+          provider_name         = var.provider_name
+          region_name           = upper(replace(var.backing_provider_region_name, "-", "_"))
+          backing_provider_name = var.backing_provider_name
+          electable_specs  ={
+            instance_size = var.provider_instance_size_name
+            node_count    = 3
+          }
+        }
+      ]
     }
-  }
-
+  ]
   # depends_on = [mongodbatlas_privatelink_endpoint_service.pe_vpc_service]
 }
 

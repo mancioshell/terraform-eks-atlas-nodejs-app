@@ -1,0 +1,21 @@
+{
+  "name": "auth-lambda",
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "esbuild src/index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/lambda.js"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/jsonwebtoken": "^9",
+    "@types/jwk-to-pem": "^2",
+    "esbuild": "^0.25.10",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "jsonwebtoken": "^9.0.2",
+    "jwk-to-pem": "^2.0.7",
+    "uuid": "^13.0.0"
+  }
+}

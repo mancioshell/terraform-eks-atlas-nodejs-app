@@ -7,6 +7,11 @@ variable "aws-region" {
   default = "us-east-1"
 }
 
+variable "is_creation_enabled" {
+  type    = number
+  default = 0
+}
+
 ################################################################################
 # EKS Cluster Variables
 ################################################################################

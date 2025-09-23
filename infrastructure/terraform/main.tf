@@ -5,6 +5,7 @@
 module "vpc" {
   source     = "./modules/vpc"
   aws-region = var.aws-region
+  count      = var.is_creation_enabled
 }
 
 
@@ -14,12 +15,13 @@ module "vpc" {
 
 module "eks" {
   source = "./modules/eks-cluster"
+  count  = var.is_creation_enabled
 
   aws-region   = var.aws-region
   cluster_name = var.cluster_name
 
-  vpc_id          = module.vpc.vpc_id
-  private_subnets = module.vpc.private_subnets
+  vpc_id          = module.vpc[0].vpc_id
+  private_subnets = module.vpc[0].private_subnets
 }
 
 
@@ -29,15 +31,16 @@ module "eks" {
 
 module "aws_alb_controller" {
   source = "./modules/aws-alb-controller"
+  count  = var.is_creation_enabled
 
   aws-region   = var.aws-region
   env_name     = var.env_name
   cluster_name = var.cluster_name
 
-  vpc_id            = module.vpc.vpc_id
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_certificate_authority_data = module.eks.cluster_certificate_authority_data
+  vpc_id                             = module.vpc[0].vpc_id
+  oidc_provider_arn                  = module.eks[0].oidc_provider_arn
+  cluster_endpoint                   = module.eks[0].cluster_endpoint
+  cluster_certificate_authority_data = module.eks[0].cluster_certificate_authority_data
 }
 
 
@@ -47,21 +50,31 @@ module "aws_alb_controller" {
 
 module "atlas_cluster" {
   source = "./modules/atlas-cluster"
+  count  = var.is_creation_enabled
 
-  atlas_org_id                   = var.atlas_org_id
-  atlas_public_key               = var.atlas_public_key
-  atlas_private_key              = var.atlas_private_key
+  atlas_org_id      = var.atlas_org_id
+  atlas_public_key  = var.atlas_public_key
+  atlas_private_key = var.atlas_private_key
 
-  atlas_db_username              = var.atlas_db_username
-  atlas_db_password              = var.atlas_db_password
+  atlas_db_username = var.atlas_db_username
+  atlas_db_password = var.atlas_db_password
 
-  project_name                   = var.atlas_project_name
-  cluster_name                   = var.atlas_cluster_name
-  cluster_type                   = var.atlas_cluster_type
-  provider_name                  = var.atlas_provider_name
-  backing_provider_name          = var.atlas_backing_provider_name
-  backing_provider_region_name   = var.aws-region
-  provider_instance_size_name    = var.atlas_provider_instance_size_name
+  project_name                 = var.atlas_project_name
+  cluster_name                 = var.atlas_cluster_name
+  cluster_type                 = var.atlas_cluster_type
+  provider_name                = var.atlas_provider_name
+  backing_provider_name        = var.atlas_backing_provider_name
+  backing_provider_region_name = var.aws-region
+  provider_instance_size_name  = var.atlas_provider_instance_size_name
 
-  vpc_id                         = module.vpc.vpc_id
+  vpc_id = module.vpc[0].vpc_id
+}
+
+################################################################################
+# Authorization Module
+################################################################################
+
+module "auth_lambda" {
+  source          = "./modules/authorization"
+  aws-region      = var.aws-region
 }
