@@ -23,30 +23,41 @@ resource "aws_iam_role_policy_attachment" "lambda_logs_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-resource "aws_lambda_permission" "api-gateway-invoke-lambda" {
-  statement_id  = "AllowAPIGatewayInvoke"
+resource "aws_lambda_permission" "api-gateway-invoke-lambda-authorizer" {
+  statement_id  = "AllowAPIGatewayInvoke_authorizer"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth-lambda.function_name
+  function_name = aws_lambda_function.lambda_authorizer.function_name
   principal     = "apigateway.amazonaws.com"
 
   # The /*/* portion grants access from any method on any resource
   # within the specified API Gateway.
-  source_arn = "${aws_api_gateway_rest_api.auth-api.execution_arn}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.api-gw.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api-gateway-invoke-lambda-proxy" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_proxy.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # The /*/* portion grants access from any method on any resource
+  # within the specified API Gateway.
+  source_arn = "${aws_api_gateway_rest_api.api-gw.execution_arn}/*/*"
 }
 
 
-data "archive_file" "auth-lambda" {
+data "archive_file" "lambda_authorizer" {
   type        = "zip"
-  source_file = "${path.module}/../../../dist/index.js"
-  output_path = "${path.module}/../../../dist/lambda.zip"
+  source_file = "${path.module}/lambda-authorizer/dist/lambda.js"
+  output_path = "${path.module}/lambda-authorizer/lambda.zip"
 }
 
-resource "aws_lambda_function" "auth-lambda" {
-  function_name    = "auth-lambda"
+resource "aws_lambda_function" "lambda_authorizer" {
+  function_name    = "lambda_authorizer"
   role             = aws_iam_role.iam_for_lambda.arn
-  filename         = data.archive_file.auth-lambda.output_path
-  handler          = "index.handler"
-  source_code_hash = data.archive_file.auth-lambda.output_base64sha256
+  filename         = data.archive_file.lambda_authorizer.output_path
+  handler          = "lambda.handler"
+  source_code_hash = data.archive_file.lambda_authorizer.output_base64sha256
   runtime          = "nodejs22.x"
   timeout          = 60
 
@@ -55,6 +66,28 @@ resource "aws_lambda_function" "auth-lambda" {
       ENVIRONMENT          = "dev"
       COGNITO_USER_POOL_ID = aws_cognito_user_pool.pool.id
       COGNITO_REGION       = var.aws-region
+    }
+  }
+}
+
+data "archive_file" "lambda_proxy" {
+  type        = "zip"
+  source_file = "${path.module}/lambda-proxy/dist/lambda.js"
+  output_path = "${path.module}/lambda-proxy/lambda.zip"
+}
+
+resource "aws_lambda_function" "lambda_proxy" {
+  function_name    = "lambda_proxy"
+  role             = aws_iam_role.iam_for_lambda.arn
+  filename         = data.archive_file.lambda_proxy.output_path
+  handler          = "lambda.handler"
+  source_code_hash = data.archive_file.lambda_proxy.output_base64sha256
+  runtime          = "nodejs22.x"
+  timeout          = 60
+
+  environment {
+    variables = {
+      ENVIRONMENT          = "dev"
     }
   }
 }

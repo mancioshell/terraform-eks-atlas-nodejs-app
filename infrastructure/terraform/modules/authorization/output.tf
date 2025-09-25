@@ -7,7 +7,7 @@ output "s3_bucket_name" {
 }
 
 output "api_gateway_base_url" {
-  value = aws_api_gateway_stage.prod.invoke_url
+  value = aws_api_gateway_stage.v1.invoke_url
 }
 
 output "cognito_client_id" {

@@ -1,6 +1,7 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
+    "build:local": {},
     "build": {
       "dependsOn": ["prebuild"],
       "outputs": ["dist/**"]

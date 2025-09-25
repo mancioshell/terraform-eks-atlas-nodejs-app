@@ -169,22 +169,22 @@ jobs:
 
       - name: Create env file
         run: |
-          touch ./apps/client/.env
-          echo REACT_APP_BASE_URL=${{ needs.terraform.outputs.cloudfront_domain_name }} >> ./apps/client/.env
-          echo REACT_APP_SERVER_URL=${{ needs.terraform.outputs.api_gateway_base_url }} >> ./apps/client/.env
-          echo REACT_APP_COGNITO_REGION=${{ needs.terraform.outputs.aws_region }} >> ./apps/client/.env
-          echo REACT_APP_USER_POOL_ID=${{ needs.terraform.outputs.cognito_user_pool_id }} >> ./apps/client/.env
-          echo REACT_APP_COGNITO_CLIENT_ID=${{ needs.terraform.outputs.cognito_client_id }} >> ./apps/client/.env
-          cat ./apps/client/.env
+          touch ./apps/user-spa/.env
+          echo BASE_URL=${{ needs.terraform.outputs.cloudfront_domain_name }} >> ./apps/client/.env
+          echo SERVER_URL=${{ needs.terraform.outputs.api_gateway_base_url }} >> ./apps/client/.env
+          echo COGNITO_REGION=${{ needs.terraform.outputs.aws_region }} >> ./apps/client/.env
+          echo USER_POOL_ID=${{ needs.terraform.outputs.cognito_user_pool_id }} >> ./apps/client/.env
+          echo COGNITO_CLIENT_ID=${{ needs.terraform.outputs.cognito_client_id }} >> ./apps/client/.env
+          cat ./apps/user-spa/.env
 
-      - name: List files in ./apps/client
+      - name: List files in ./apps/user-spa
         run: |
-          echo "Listing files in ./apps/client:"
-          ls -al ./apps/client
+          echo "Listing files in ./apps/user-spa:"
+          ls -al ./apps/user-spa
 
       - name: Build
         run: CI=false yarn build
-        working-directory: ./apps/client
+        working-directory: ./apps/user-spa
 
       - name: Deploy to S3
         uses: jakejarvis/s3-sync-action@master
@@ -195,4 +195,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ needs.terraform.outputs.aws_region }}
-          SOURCE_DIR: "apps/client/build"
+          SOURCE_DIR: "apps/user-spa/dist"

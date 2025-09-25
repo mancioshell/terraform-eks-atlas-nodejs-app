@@ -1,0 +1,17 @@
+{
+  "name": "lambda-proxy",
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "esbuild src/index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/lambda.js",
+    "build:local": "esbuild src/index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=../../infrastructure/terraform/modules/authorization/lambda-proxy/dist/lambda.js"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "esbuild": "^0.25.10",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
+  }
+}

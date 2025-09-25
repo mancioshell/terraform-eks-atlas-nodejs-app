@@ -1,45 +1,60 @@
-import { APIGatewayProxyResult, APIGatewayEvent } from "aws-lambda";
-import { v4 as uuidv4 } from "uuid";
+import { PolicyDocument, APIGatewayTokenAuthorizerEvent } from "aws-lambda";
 import { verifyToken } from "./verify";
 
-const defaultHeaders = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Credentials": "true",
+interface AuthResponse {
+  principalId: string;
+  policyDocument: PolicyDocument;
+  context: {
+    message: string;
+  };
+}
+
+const generatePolicy = async (
+  effect: string,
+  resource: string,
+  message: string
+) => {
+  return {
+    principalId: "user",
+    policyDocument: {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Action: "execute-api:Invoke",
+          Effect: effect,
+          Resource: resource,
+        },
+      ],
+    },
+    context: { message },
+  };
 };
 
 export const handler = async (
-  event: APIGatewayEvent
-): Promise<APIGatewayProxyResult> => {
+  event: APIGatewayTokenAuthorizerEvent
+): Promise<AuthResponse> => {
   try {
-    const token = (event.headers.Authorization || "").replace("Bearer ", "");
+    console.log("Event: ", event);
+    const token = (event.authorizationToken || "").replace("Bearer ", "");
     if (!token) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ message: "Missing token" }),
-      };
+      const policy = await generatePolicy(
+        "Deny",
+        event.methodArn,
+        "Missing token"
+      );
+      return policy as AuthResponse;
     }
 
     await verifyToken(token);
 
-    const data = {
-      id: uuidv4(),
-      message: "Hello from Lambda",
-    };
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-      headers: {
-        ...defaultHeaders,
-      },
-    };
+    const policy = await generatePolicy("Allow", event.methodArn, "Authorized");
+    return policy as AuthResponse;
   } catch (error) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ message: "Unauthorized" }),
-    }; 
+    const policy = await generatePolicy(
+      "Deny",
+      event.methodArn,
+      (error as Error).message || "Unauthorized"
+    );
+    return policy as AuthResponse;
   }
 };

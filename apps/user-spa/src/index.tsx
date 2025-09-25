@@ -2,7 +2,6 @@ import { createRoot } from "react-dom/client";
 import { StrictMode } from "react";
 import { BrowserRouter } from "react-router";
 import { AuthProvider } from "react-oidc-context";
-
 import { config } from "./config";
 import { App } from "./App";
 

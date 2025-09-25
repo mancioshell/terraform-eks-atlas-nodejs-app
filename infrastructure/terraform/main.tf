@@ -74,7 +74,7 @@ module "atlas_cluster" {
 # Authorization Module
 ################################################################################
 
-module "auth_lambda" {
+module "authorization" {
   source          = "./modules/authorization"
   aws-region      = var.aws-region
 }

@@ -11,7 +11,7 @@ export function AuthUser() {
       try {
         const token = auth.user?.access_token;
         const response = await fetch(
-          `${config.serverURL}/prod/api/v1/auth`,
+          `${config.serverURL}/v1/users`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

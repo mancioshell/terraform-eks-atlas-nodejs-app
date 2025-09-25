@@ -56,7 +56,7 @@ resource "aws_cognito_user_pool_client" "client" {
 }
 
 resource "aws_cognito_user_pool_domain" "cognito_domain" {
-  domain       = "user-pool-domain-yz"
+  domain       = "nodejs-app-user-pool-domain-yz"
   user_pool_id = aws_cognito_user_pool.pool.id
 }
 

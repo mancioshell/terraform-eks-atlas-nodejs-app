@@ -10,3 +10,5 @@ node_modules
 dist
 .env
 *.auto.tfvars
+.parcel-cache
+infrastructure/terraform/modules/aks-cluster/
