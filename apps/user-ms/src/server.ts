@@ -9,7 +9,7 @@ dotenv.config();
 const PORT = process.env.PORT;
 
 async function startServer() {
-  await connectToDatabase();
+  //await connectToDatabase();
 
   const app = express();
 

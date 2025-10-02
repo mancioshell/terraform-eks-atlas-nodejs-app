@@ -182,3 +182,7 @@ DELETE http://<alb-dns-name>/api/users/:id // Delete a user by ID
 
 Remember to clean up the resources when you are done testing in order to avoid unnecessary costs:
 - You can run a GitHub Action to destroy the infrastructure by triggering the `destroy-infrastructure.yml` workflow.
+
+
+
+aws eks --region us-east-1 update-kubeconfig --name eks-cluster 

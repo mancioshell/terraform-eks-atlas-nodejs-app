@@ -9,7 +9,8 @@ usersRouter.use(express.json());
 usersRouter.get("/", async (_req: Request, res: Response) => {
   try {
     // Call find with an empty filter object, meaning it returns all documents in the collection. Saves as User array to take advantage of types
-    const users = await collections.users?.find({}).toArray();
+    //const users = await collections.users?.find({}).toArray();
+    const users: any[] = [];
 
     res.status(200).send(users);
   } catch (error) {
